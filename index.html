@@ -69,6 +69,7 @@ dialog h3{margin:0 0 6px;font-family:Anton,Impact,sans-serif;font-weight:400;let
   <button class="btn acc" id="bPublicar">📋 Post pronto</button>
   <button class="btn" id="bSalvar">💾 Salvar projeto</button>
   <button class="btn" id="bAbrir">📂 Abrir projeto</button>
+  <button class="btn" id="bBiblioteca">📚 Meus projetos</button>
   <button class="btn" id="bColar">📥 Colar projeto</button>
   <button class="btn" id="bLink">🔗 Gerar link</button>
   <button class="btn" id="bPng">Baixar este PNG</button>
@@ -95,6 +96,13 @@ dialog h3{margin:0 0 6px;font-family:Anton,Impact,sans-serif;font-weight:400;let
     <div class="row">
       <div><label>@ do perfil</label><input type="text" id="perfil"></div>
       <div><label>Rodapé de arrastar</label><input type="text" id="arrasta"></div>
+    </div>
+
+    <h2>Salvo neste aparelho</h2>
+    <p class="mini" id="stPrefs" style="margin-top:0"></p>
+    <div class="row">
+      <button class="btn" id="bPrefsSalvar">💾 Salvar como meu padrão</button>
+      <button class="btn danger" id="bPrefsLimpar">Esquecer</button>
     </div>
 
     <h2>Este card</h2>
@@ -213,6 +221,13 @@ dialog h3{margin:0 0 6px;font-family:Anton,Impact,sans-serif;font-weight:400;let
     <button class="btn" id="bCopiarLink" style="display:none">📋 Copiar link</button>
     <button class="btn acc" id="bCarregarColado">Carregar projeto</button>
   </div>
+</dialog>
+<dialog id="dlgBib">
+  <h3>MEUS PROJETOS</h3>
+  <p class="mini">Todo projeto que você abre por link entra aqui sozinho. Ficam salvos neste aparelho, então o celular tem a lista dele e o computador a dele.</p>
+  <button class="btn acc" id="bSalvarBib" style="width:100%;margin:10px 0 4px">💾 Salvar o projeto aberto agora</button>
+  <div id="listaBib" style="max-height:52vh;overflow-y:auto;margin-top:10px"></div>
+  <div class="row" style="margin-top:12px"><button class="btn" id="bFecharBib">Fechar</button></div>
 </dialog>
 <input type="file" id="fJson" accept=".json" hidden>
 
@@ -536,8 +551,10 @@ function syncEditor(){
 }
 ['titulo','obra','apoio','etiqueta'].forEach(id =>
   $(id).addEventListener('input', () => { cur()[id] = $(id).value; render(); }));
-$('perfil').addEventListener('input', () => { state.perfil = $('perfil').value.replace('@',''); render(); });
-$('arrasta').addEventListener('input', () => { state.arrasta = $('arrasta').value; render(); });
+let prefsTimer = null;
+function prefsAuto(){ clearTimeout(prefsTimer); prefsTimer = setTimeout(() => { prefsGravar(); prefsStatus(); }, 700); }
+$('perfil').addEventListener('input', () => { state.perfil = $('perfil').value.replace('@',''); render(); prefsAuto(); });
+$('arrasta').addEventListener('input', () => { state.arrasta = $('arrasta').value; render(); prefsAuto(); });
 document.querySelectorAll('#tipos .pill').forEach(p =>
   p.onclick = () => { cur().tipo = p.dataset.t; syncEditor(); render(); });
 function hookDrop(id, key){
@@ -569,7 +586,7 @@ function circUI(){
   $('s'+k).addEventListener('input', e => {
     state.circulos[campo] = +e.target.value;
     $('v'+k).textContent = e.target.value;
-    render();
+    render(); prefsAuto();
   });
 });
 $('bCircPadrao').onclick = () => { state.circulos = { ...CIRC_PADRAO }; circUI(); render(); };
@@ -607,7 +624,7 @@ window.addEventListener('mousemove', ev => {
   C.y = Math.max(120, Math.min(640, Math.round(pt.y - arrastando.dy)));
   circUI(); render();
 });
-window.addEventListener('mouseup', () => { if (arrastando){ arrastando = null; cv.style.cursor = 'grab'; } });
+window.addEventListener('mouseup', () => { if (arrastando){ arrastando = null; cv.style.cursor = 'grab'; prefsAuto(); } });
 
 /* ============ Navegação e estrutura ============ */
 $('bPrev').onclick = () => { if (state.atual>0){ state.atual--; syncEditor(); render(); } };
@@ -713,13 +730,114 @@ $('bCarregarColado').onclick = () => {
     $('stAuto').textContent = 'projeto carregado. Se tiver plano de imagens, elas já estão entrando.';
   } catch(e){ $('mColar').textContent = '❌ Não consegui ler isso. Cole o JSON inteiro ou o link que termina em #p=…'; }
 };
-// abrir direto pelo link
-(function(){
+// abrir pelo link: na carga da página e também quando o endereço muda
+function carregarDoHash(){
   const h = location.hash || '';
-  if (h.startsWith('#p=')){
-    try { carregar(deBase64(h.slice(3)), true); } catch(e){ console.log('link inválido', e); }
+  if (!h.startsWith('#p=')) return false;
+  try { carregar(deBase64(h.slice(3)), true); setTimeout(() => bibSalvar(true), 600); return true; }
+  catch(e){ console.log('link inválido', e); return false; }
+}
+carregarDoHash();
+window.addEventListener('hashchange', () => {
+  if (carregarDoHash()) $('stAuto').textContent = 'projeto novo carregado pelo link.';
+});
+/* ============ Preferências do aparelho ============ */
+const PREFS_CHAVE = 'estudio-prefs';
+function prefsLer(){
+  try { return JSON.parse(localStorage.getItem(PREFS_CHAVE) || 'null'); } catch(e){ return null; }
+}
+function prefsGravar(){
+  try {
+    localStorage.setItem(PREFS_CHAVE, JSON.stringify({
+      perfil: state.perfil, arrasta: state.arrasta, circulos: { ...state.circulos }
+    }));
+    return true;
+  } catch(e){ return false; }
+}
+function prefsAplicar(){
+  const p = prefsLer(); if (!p) return;
+  if (p.perfil) state.perfil = p.perfil;
+  if (p.arrasta !== undefined) state.arrasta = p.arrasta;
+  if (p.circulos) state.circulos = { ...CIRC_PADRAO, ...p.circulos };
+}
+function prefsStatus(){
+  const p = prefsLer(), temChave = !!tmdbChave();
+  const partes = [];
+  partes.push(temChave ? '✅ chave do TMDb salva' : '⚠️ chave do TMDb ainda não salva');
+  partes.push(p ? ('✅ @' + p.perfil + ', rodapé e círculos salvos') : 'perfil e círculos ainda não salvos como padrão');
+  $('stPrefs').innerHTML = partes.join('<br>');
+}
+$('bPrefsSalvar').onclick = () => {
+  $('stPrefs').textContent = prefsGravar() ? 'salvo. Todo projeto que abrir aqui vai usar isso.' : 'não consegui salvar neste navegador.';
+  setTimeout(prefsStatus, 1800);
+};
+$('bPrefsLimpar').onclick = () => {
+  try { localStorage.removeItem(PREFS_CHAVE); localStorage.removeItem('tmdb-key'); } catch(e){}
+  prefsStatus();
+  $('stAuto').textContent = 'preferências apagadas deste aparelho.';
+};
+/* ============ Biblioteca de projetos ============ */
+function bibLer(){
+  try { return JSON.parse(localStorage.getItem('estudio-biblioteca') || '[]'); } catch(e){ return []; }
+}
+function bibGravar(lista){
+  try { localStorage.setItem('estudio-biblioteca', JSON.stringify(lista)); return true; }
+  catch(e){ return false; }
+}
+function nomeDoProjeto(d){
+  const capa = (d.slides || []).find(s => s.tipo === 'capa') || (d.slides || [])[0] || {};
+  return (capa.titulo || 'Sem título').replace(/\*\*/g,'').slice(0, 60);
+}
+function bibSalvar(silencioso){
+  const txt = projetoLeve();
+  const d = JSON.parse(txt);
+  const lista = bibLer();
+  // não duplica: mesmo conteúdo já guardado
+  if (lista.some(p => p.projeto === txt)){
+    if (!silencioso) $('stAuto').textContent = 'esse projeto já está na sua biblioteca.';
+    return false;
   }
-})();
+  lista.unshift({
+    id: Date.now(),
+    nome: nomeDoProjeto(d),
+    cards: (d.slides || []).length,
+    data: new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit' }),
+    projeto: txt
+  });
+  const ok = bibGravar(lista.slice(0, 40));
+  if (!silencioso) $('stAuto').textContent = ok ? '✅ salvo em Meus projetos.' : '⚠️ memória do navegador cheia, apague projetos antigos.';
+  return ok;
+}
+function bibRender(){
+  const box = $('listaBib'), lista = bibLer();
+  box.innerHTML = '';
+  if (!lista.length){
+    box.innerHTML = '<p class="mini">Nenhum projeto guardado ainda.</p>';
+    return;
+  }
+  lista.forEach(p => {
+    const d = document.createElement('div');
+    d.style.cssText = 'background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:150px';
+    info.innerHTML = '<div style="font-weight:600;font-size:14px">' + p.nome.replace(/</g,'&lt;') +
+                     '</div><div class="mini" style="margin:0">' + p.cards + ' cards · ' + p.data + '</div>';
+    const abrir = document.createElement('button');
+    abrir.className = 'btn acc'; abrir.style.cssText = 'margin:0;padding:7px 13px;font-size:12.5px';
+    abrir.textContent = 'Abrir';
+    abrir.onclick = () => { carregar(p.projeto, true); $('dlgBib').close();
+                            $('stAuto').textContent = 'projeto aberto da biblioteca.'; };
+    const apagar = document.createElement('button');
+    apagar.className = 'btn danger'; apagar.style.cssText = 'margin:0;padding:7px 11px;font-size:12.5px';
+    apagar.textContent = 'Apagar';
+    apagar.onclick = () => { bibGravar(bibLer().filter(x => x.id !== p.id)); bibRender(); };
+    d.append(info, abrir, apagar);
+    box.appendChild(d);
+  });
+}
+$('bBiblioteca').onclick = () => { bibRender(); $('dlgBib').showModal(); };
+$('bFecharBib').onclick = () => $('dlgBib').close();
+$('bSalvarBib').onclick = () => { bibSalvar(false); bibRender(); };
 /* ============ Compartilhar do celular ============ */
 function dataURLparaFile(url, nome){
   const [cab, b64] = url.split(',');
@@ -771,6 +889,7 @@ function carregar(json, comImagens){
       return s;
     });
     if (!state.slides.length) state.slides = [novoSlide('capa')];
+    prefsAplicar();
     state.atual = Math.min(d.atual||0, state.slides.length-1);
     syncEditor(); render();
     const temPlano = state.slides.some(x => x.tmdbId);
@@ -785,7 +904,9 @@ $('bSalvar').onclick = () => baixar('data:application/json;charset=utf-8,' + enc
 $('bAbrir').onclick = () => $('fJson').click();
 $('fJson').onchange = () => {
   const f = $('fJson').files[0]; if (!f) return;
-  const r = new FileReader(); r.onload = () => carregar(r.result, true); r.readAsText(f);
+  const r = new FileReader();
+  r.onload = () => { carregar(r.result, true); setTimeout(() => bibSalvar(true), 600); };
+  r.readAsText(f);
 };
 function autosave(){
   try {
@@ -795,8 +916,11 @@ function autosave(){
   } catch(e){}
 }
 try {
-  const salvo = localStorage.getItem('estudio-fsf');
-  if (salvo) carregar(salvo, false);
+  // o projeto vindo por link tem prioridade sobre o autosave deste navegador
+  if (!location.hash.startsWith('#p=')){
+    const salvo = localStorage.getItem('estudio-fsf');
+    if (salvo) carregar(salvo, false);
+  }
 } catch(e){}
 /* ============ Busca TMDb ============ */
 let tmdbAlvo = 'img';
@@ -831,7 +955,8 @@ async function tmdb(path, params){
 $('bBuscar').onclick = () => { tmdbUI(); $('dlgImg').showModal(); const q = $('qBusca'); if (cur().obra && !q.value) q.value = cur().obra; };
 $('bFecharImg').onclick = () => $('dlgImg').close();
 $('bTrocarKey').onclick = () => { tmdbSalvaChave(''); tmdbUI(); };
-$('bKey').onclick = () => { const k = $('tmdbKey').value.trim(); if (k){ tmdbSalvaChave(k); tmdbUI(); } };
+$('bKey').onclick = () => { const k = $('tmdbKey').value.trim(); if (k){ tmdbSalvaChave(k); tmdbUI(); prefsStatus();
+  $('stAuto').textContent = '✅ chave salva neste aparelho. Não vou pedir de novo.'; } };
 document.querySelectorAll('#alvos .pill').forEach(pl =>
   pl.onclick = () => { tmdbAlvo = pl.dataset.a;
     document.querySelectorAll('#alvos .pill').forEach(x => x.classList.toggle('sel', x === pl)); });
@@ -1074,7 +1199,7 @@ $('bDiag').onclick = async () => {
 /* ============ Boot ============ */
 LOGO.onload = render;
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
-syncEditor(); render();
+prefsAplicar(); syncEditor(); render(); prefsStatus();
 </script>
 
 </body>
