@@ -69,9 +69,6 @@ dialog h3{margin:0 0 6px;font-family:Anton,Impact,sans-serif;font-weight:400;let
   <button class="btn acc" id="bPublicar">📋 Post pronto</button>
   <button class="btn" id="bSalvar">💾 Salvar projeto</button>
   <button class="btn" id="bAbrir">📂 Abrir projeto</button>
-  <button class="btn" id="bBiblioteca">📚 Meus projetos</button>
-  <button class="btn" id="bColar">📥 Colar projeto</button>
-  <button class="btn" id="bLink">🔗 Gerar link</button>
   <button class="btn" id="bPng">Baixar este PNG</button>
   <button class="btn acc" id="bTodos">⬇ Baixar todos (1080×1350)</button>
   <button class="btn acc" id="bShare" style="display:none">📤 Compartilhar</button>
@@ -212,23 +209,46 @@ dialog h3{margin:0 0 6px;font-family:Anton,Impact,sans-serif;font-weight:400;let
     <button class="btn" id="bFecharPub">Fechar</button>
   </div>
 </dialog>
-<dialog id="dlgColar">
-  <h3 id="tColar">COLAR PROJETO</h3>
-  <p class="mini" id="mColar">Cole aqui o projeto que o time de agentes mandou e clique em Carregar. Funciona no celular sem precisar baixar arquivo.</p>
-  <textarea id="taColar" style="min-height:170px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px"></textarea>
-  <div class="row" style="margin-top:12px">
-    <button class="btn" id="bFecharColar">Fechar</button>
-    <button class="btn" id="bCopiarLink" style="display:none">📋 Copiar link</button>
-    <button class="btn acc" id="bCarregarColado">Carregar projeto</button>
+<dialog id="dlgSalvar">
+  <h3>SALVAR PROJETO</h3>
+  <p class="mini" id="mSalvar">Guarde este carrossel pra reabrir depois, no computador ou no celular.</p>
+
+  <button class="btn acc" id="sBaixar" style="width:100%;margin-top:12px">💾 Baixar arquivo do projeto</button>
+  <p class="mini">Um arquivo .json com o roteiro, a legenda, as trilhas e o plano de imagens.</p>
+
+  <button class="btn" id="sDrive" style="width:100%;margin-top:10px">☁️ Salvar na minha pasta do Drive</button>
+  <p class="mini">Baixa o arquivo e abre a sua pasta numa aba nova: é só arrastar o arquivo pra lá.</p>
+  <label style="margin-top:6px">Endereço da sua pasta no Drive</label>
+  <input type="text" id="urlDrive" placeholder="https://drive.google.com/drive/folders/...">
+
+  <h2 style="margin-top:20px">Link do projeto</h2>
+  <p class="mini" style="margin-top:0">Abre o carrossel montado em qualquer aparelho, com as imagens entrando sozinhas.</p>
+  <textarea id="taLink" style="min-height:64px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:11.5px" readonly></textarea>
+  <div class="row" style="margin-top:8px">
+    <button class="btn acc" id="sCopiarLink">📋 Copiar link</button>
+    <button class="btn" id="sEnviarLink">📤 Enviar link</button>
   </div>
+
+  <button class="btn" id="sGuardar" style="width:100%;margin-top:16px">📚 Guardar em Meus projetos</button>
+  <div class="row" style="margin-top:12px"><button class="btn" id="sFechar">Fechar</button></div>
 </dialog>
+
 <dialog id="dlgBib">
-  <h3>MEUS PROJETOS</h3>
-  <p class="mini">Todo projeto que você abre por link entra aqui sozinho. Ficam salvos neste aparelho, então o celular tem a lista dele e o computador a dele.</p>
-  <button class="btn acc" id="bSalvarBib" style="width:100%;margin:10px 0 4px">💾 Salvar o projeto aberto agora</button>
-  <div id="listaBib" style="max-height:52vh;overflow-y:auto;margin-top:10px"></div>
+  <h3>ABRIR PROJETO</h3>
+  <div class="row" style="margin-top:10px">
+    <button class="btn acc" id="aArquivo">📂 Escolher arquivo</button>
+    <button class="btn" id="aDrive">☁️ Abrir meu Drive</button>
+  </div>
+  <label style="margin-top:12px">Ou cole aqui o link ou o JSON que o time mandou</label>
+  <textarea id="taColar2" style="min-height:70px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:11.5px"></textarea>
+  <button class="btn" id="aColar" style="width:100%;margin-top:8px">Carregar o que está colado</button>
+  <h2 style="margin-top:20px">Meus projetos</h2>
+  <p class="mini" style="margin-top:0">Todo projeto aberto por link entra aqui sozinho. A lista é deste aparelho.</p>
+  <div id="listaBib" style="max-height:40vh;overflow-y:auto;margin-top:8px"></div>
+  <button class="btn acc" id="bSalvarBib" style="width:100%;margin-top:10px">💾 Guardar o projeto aberto agora</button>
   <div class="row" style="margin-top:12px"><button class="btn" id="bFecharBib">Fechar</button></div>
 </dialog>
+
 <input type="file" id="fJson" accept=".json" hidden>
 
 <script>
@@ -702,34 +722,45 @@ function projetoLeve(){
   d.slides.forEach(s => { s.img_src = s.c1_src = s.c2_src = null; });
   return JSON.stringify(d);
 }
-$('bLink').onclick = () => {
-  const url = location.origin + location.pathname + '#p=' + paraBase64(projetoLeve());
-  $('tColar').textContent = 'LINK DO PROJETO';
-  $('mColar').textContent = 'Mande este link pro seu celular. Ao abrir, o Estúdio carrega o carrossel inteiro e busca as imagens sozinho. O link não leva imagens embutidas, então fica leve.';
-  $('taColar').value = url;
-  $('bCopiarLink').style.display = ''; $('bCarregarColado').style.display = 'none';
-  $('bCopiarLink').onclick = () => copiar(url, $('bCopiarLink'), '✅ link copiado');
-  $('dlgColar').showModal();
+const DRIVE_PADRAO = 'https://drive.google.com/drive/folders/1z6MTh0QNkVyKWi1LNUe9BeMhhS34SI4t';
+function linkDoProjeto(){
+  return location.origin + location.pathname + '#p=' + paraBase64(projetoLeve());
+}
+function nomeArquivo(){
+  const d = JSON.parse(projetoLeve());
+  return 'carrossel-' + nomeDoProjeto(d).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40) + '.json';
+}
+$('bSalvar').onclick = () => {
+  $('taLink').value = linkDoProjeto();
+  $('urlDrive').value = (prefsLer() || {}).drive || DRIVE_PADRAO;
+  $('dlgSalvar').showModal();
 };
-$('bColar').onclick = () => {
-  $('tColar').textContent = 'COLAR PROJETO';
-  $('mColar').textContent = 'Cole aqui o projeto que o time de agentes mandou, em JSON ou em link, e clique em Carregar.';
-  $('taColar').value = '';
-  $('bCopiarLink').style.display = 'none'; $('bCarregarColado').style.display = '';
-  $('dlgColar').showModal();
+$('sFechar').onclick = () => $('dlgSalvar').close();
+$('sBaixar').onclick = () => {
+  baixar('data:application/json;charset=utf-8,' + encodeURIComponent(serial()), nomeArquivo());
+  $('mSalvar').textContent = '✅ arquivo baixado: ' + nomeArquivo();
 };
-$('bFecharColar').onclick = () => $('dlgColar').close();
-$('bCarregarColado').onclick = () => {
-  let txt = $('taColar').value.trim();
-  if (!txt) return;
-  try {
-    if (txt.includes('#p=')) txt = deBase64(txt.split('#p=')[1]);
-    else if (!txt.startsWith('{')) txt = deBase64(txt);
-    carregar(txt, true);
-    $('dlgColar').close();
-    $('stAuto').textContent = 'projeto carregado. Se tiver plano de imagens, elas já estão entrando.';
-  } catch(e){ $('mColar').textContent = '❌ Não consegui ler isso. Cole o JSON inteiro ou o link que termina em #p=…'; }
+$('urlDrive').addEventListener('input', () => {
+  prefsGravar({ drive: $('urlDrive').value.trim() }); prefsStatus();
+});
+$('sDrive').onclick = () => {
+  const url = $('urlDrive').value.trim() || DRIVE_PADRAO;
+  baixar('data:application/json;charset=utf-8,' + encodeURIComponent(serial()), nomeArquivo());
+  setTimeout(() => window.open(url, '_blank', 'noopener'), 500);
+  $('mSalvar').textContent = 'Arquivo baixado. A pasta do Drive abriu numa aba nova: arraste o arquivo pra lá.';
 };
+$('sCopiarLink').onclick = () => copiar($('taLink').value, $('sCopiarLink'), '✅ copiado');
+$('sEnviarLink').onclick = async () => {
+  const url = $('taLink').value;
+  const d = JSON.parse(projetoLeve());
+  if (navigator.share){
+    try { await navigator.share({ title: nomeDoProjeto(d), text: 'Carrossel pronto: ' + nomeDoProjeto(d), url }); }
+    catch(e){}
+  } else copiar(url, $('sEnviarLink'), '✅ link copiado');
+};
+$('sGuardar').onclick = () => { bibSalvar(false); $('mSalvar').textContent = '✅ guardado em Meus projetos.'; };
 // abrir pelo link: na carga da página e também quando o endereço muda
 function carregarDoHash(){
   const h = location.hash || '';
@@ -746,10 +777,12 @@ const PREFS_CHAVE = 'estudio-prefs';
 function prefsLer(){
   try { return JSON.parse(localStorage.getItem(PREFS_CHAVE) || 'null'); } catch(e){ return null; }
 }
-function prefsGravar(){
+function prefsGravar(extra){
   try {
+    const atual = prefsLer() || {};
     localStorage.setItem(PREFS_CHAVE, JSON.stringify({
-      perfil: state.perfil, arrasta: state.arrasta, circulos: { ...state.circulos }
+      ...atual, perfil: state.perfil, arrasta: state.arrasta,
+      circulos: { ...state.circulos }, ...(extra || {})
     }));
     return true;
   } catch(e){ return false; }
@@ -764,7 +797,9 @@ function prefsStatus(){
   const p = prefsLer(), temChave = !!tmdbChave();
   const partes = [];
   partes.push(temChave ? '✅ chave do TMDb salva' : '⚠️ chave do TMDb ainda não salva');
-  partes.push(p ? ('✅ @' + p.perfil + ', rodapé e círculos salvos') : 'perfil e círculos ainda não salvos como padrão');
+  partes.push(p && p.perfil ? ('✅ @' + p.perfil + ', rodapé e círculos salvos')
+                            : 'perfil e círculos ainda não salvos como padrão');
+  if (p && p.drive) partes.push('✅ pasta do Drive configurada');
   $('stPrefs').innerHTML = partes.join('<br>');
 }
 $('bPrefsSalvar').onclick = () => {
@@ -835,7 +870,24 @@ function bibRender(){
     box.appendChild(d);
   });
 }
-$('bBiblioteca').onclick = () => { bibRender(); $('dlgBib').showModal(); };
+$('bAbrir').onclick = () => { bibRender(); $('taColar2').value = ''; $('dlgBib').showModal(); };
+$('aArquivo').onclick = () => $('fJson').click();
+$('aDrive').onclick = () => {
+  const u = (prefsLer() || {}).drive || DRIVE_PADRAO;
+  window.open(u, '_blank', 'noopener');
+};
+$('aColar').onclick = () => {
+  let txt = $('taColar2').value.trim();
+  if (!txt) return;
+  try {
+    if (txt.includes('#p=')) txt = deBase64(txt.split('#p=')[1]);
+    else if (!txt.startsWith('{')) txt = deBase64(txt);
+    carregar(txt, true);
+    setTimeout(() => bibSalvar(true), 600);
+    $('dlgBib').close();
+    $('stAuto').textContent = 'projeto carregado.';
+  } catch(e){ $('stAuto').textContent = '❌ não consegui ler isso. Cole o JSON inteiro ou o link que termina em #p=…'; }
+};
 $('bFecharBib').onclick = () => $('dlgBib').close();
 $('bSalvarBib').onclick = () => { bibSalvar(false); bibRender(); };
 /* ============ Compartilhar do celular ============ */
@@ -900,8 +952,6 @@ function carregar(json, comImagens){
     }
   } catch(e){ console.log('projeto inválido', e); }
 }
-$('bSalvar').onclick = () => baixar('data:application/json;charset=utf-8,' + encodeURIComponent(serial()), `carrossel-${state.perfil}.json`);
-$('bAbrir').onclick = () => $('fJson').click();
 $('fJson').onchange = () => {
   const f = $('fJson').files[0]; if (!f) return;
   const r = new FileReader();
