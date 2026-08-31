@@ -359,6 +359,16 @@ function selo(cx2, cy, r){
   if (!LOGO.complete || !LOGO.naturalWidth) return;
   ctx.drawImage(LOGO, cx2-r, cy-r, r*2, r*2);
 }
+function divisor(cy, r, comp, cor, esp){
+  // r = raio do selo; comp = comprimento de cada linha lateral
+  const folga = r + 26;
+  ctx.strokeStyle = cor; ctx.lineWidth = esp;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - folga - comp, cy); ctx.lineTo(W/2 - folga, cy);
+  ctx.moveTo(W/2 + folga, cy);        ctx.lineTo(W/2 + folga + comp, cy);
+  ctx.stroke();
+  selo(W/2, cy, r);
+}
 function chrome(s, idx, total){
   // @ perfil
   ctx.textAlign = 'left'; ctx.font = '600 27px Inter, sans-serif';
@@ -407,9 +417,7 @@ function drawCapa(s){
   const hT = lines.length * size*1.08, hA = aLines.length * 50 + (aLines.length ? 22 : 0);
   let y = BASE - hA - hT + size;
   const ly = Math.max(topH*0.62, y - size - 118);
-  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(96,ly); ctx.lineTo(432,ly); ctx.moveTo(648,ly); ctx.lineTo(984,ly); ctx.stroke();
-  selo(W/2, ly, 80);
+  divisor(ly, 54, 210, 'rgba(255,255,255,.85)', 3);
   y = drawLines(lines, `400 ${size}px Anton, Impact, sans-serif`, W/2, y, size*1.08, 'center', '#fff', '#f7a92d');
   if (aLines.length) drawLines(aLines, aFont, W/2, y+22, 50, 'center', 'rgba(255,255,255,.8)', '#f7a92d');
 }
@@ -425,9 +433,7 @@ function drawFoto(s){
   const hT = lines.length * size*1.08, hA = aLines.length * 48 + (aLines.length ? 18 : 0);
   let y = BASE - hA - hT + size;
   const ly = y - size - 96;
-  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(300,ly); ctx.lineTo(470,ly); ctx.moveTo(610,ly); ctx.lineTo(780,ly); ctx.stroke();
-  selo(W/2, ly, 58);
+  divisor(ly, 40, 118, 'rgba(255,255,255,.8)', 3);
   y = drawLines(lines, `400 ${size}px Anton, Impact, sans-serif`, W/2, y, size*1.08, 'center', '#fff', '#f7a92d');
   if (aLines.length) drawLines(aLines, aFont, W/2, y+18, 48, 'center', 'rgba(255,255,255,.85)', '#f7a92d');
 }
