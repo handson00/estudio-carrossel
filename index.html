@@ -260,7 +260,8 @@ const $ = id => document.getElementById(id);
 
 function novoSlide(tipo){
   return { tipo, titulo:'', obra:'', apoio:'', etiqueta:'', img:null, c1:null, c2:null,
-           tmdbId:null, tmdbTipo:'tv', imgHint:'', tmdbC1:null, tmdbC2:null };
+           tmdbId:null, tmdbTipo:'tv', imgHint:'', tmdbC1:null, tmdbC2:null,
+           tmdbC1Tipo:'tv', tmdbC2Tipo:'tv' };
 }
 const CIRC_PADRAO = { margem: 14, y: 272, r: 172 };
 let state = {
@@ -927,6 +928,7 @@ function serial(){
     circulos: state.circulos, legenda: state.legenda || '', trilhas: state.trilhas || [],
     slides: state.slides.map(s => ({ tipo:s.tipo, titulo:s.titulo, obra:s.obra, apoio:s.apoio, etiqueta:s.etiqueta,
       tmdbId:s.tmdbId||null, tmdbTipo:s.tmdbTipo||'tv', imgHint:s.imgHint||'', tmdbC1:s.tmdbC1||null, tmdbC2:s.tmdbC2||null,
+      tmdbC1Tipo:s.tmdbC1Tipo||'tv', tmdbC2Tipo:s.tmdbC2Tipo||'tv',
       img_src:s.img_src||null, c1_src:s.c1_src||null, c2_src:s.c2_src||null }))
   });
 }
@@ -940,7 +942,8 @@ function carregar(json, comImagens){
       const s = novoSlide(o.tipo || 'foto');
       Object.assign(s, { titulo:o.titulo||'', obra:o.obra||'', apoio:o.apoio||'', etiqueta:o.etiqueta||'',
         tmdbId:o.tmdbId||null, tmdbTipo:o.tmdbTipo||'tv', imgHint:o.imgHint||'',
-        tmdbC1:o.tmdbC1||null, tmdbC2:o.tmdbC2||null });
+        tmdbC1:o.tmdbC1||null, tmdbC2:o.tmdbC2||null,
+        tmdbC1Tipo:o.tmdbC1Tipo||'tv', tmdbC2Tipo:o.tmdbC2Tipo||'tv' });
       if (comImagens) for (const k of ['img','c1','c2']){
         if (o[k+'_src']){ const im = new Image(); im.onload = render; im.src = o[k+'_src']; s[k] = im; s[k+'_src'] = o[k+'_src']; }
       }
@@ -1133,7 +1136,7 @@ $('bAuto').onclick = async () => {
       for (const [campo, alvo] of [['tmdbC1','c1'], ['tmdbC2','c2']]){
         if (!s2[campo]) continue;
         st.textContent = `círculo ${alvo === 'c1' ? 'esquerdo' : 'direito'} da capa…`;
-        const fc = await acharImagens('', s2[campo], 'tv');
+        const fc = await acharImagens('', s2[campo], s2[campo + 'Tipo'] || 'tv');
         if (fc.length){ s2[alvo === 'c1' ? '_posC1' : '_posC2'] = 0;
                         await aplicarPath(fc[0].file_path, i, alvo); }
       }
@@ -1151,14 +1154,15 @@ $('bAuto').onclick = async () => {
 async function trocarAlvo(alvo){
   const s2 = cur(), st = $('stAuto');
   const id = alvo === 'c1' ? s2.tmdbC1 : s2.tmdbC2;
+  const tipoAlvo = (alvo === 'c1' ? s2.tmdbC1Tipo : s2.tmdbC2Tipo) || 'tv';
   const lado = alvo === 'c1' ? 'esquerdo' : 'direito';
   if (!id){
-    st.textContent = `Defina a série do círculo ${lado} primeiro: 🔎 Buscar, escolher o alvo "Círculo ${alvo === 'c1' ? 'esq' : 'dir'}" e clicar numa imagem.`;
+    st.textContent = `Defina o filme ou a série do círculo ${lado} primeiro: 🔎 Buscar, escolher o alvo "Círculo ${alvo === 'c1' ? 'esq' : 'dir'}" e clicar numa imagem.`;
     return;
   }
   st.textContent = `procurando outra imagem para o círculo ${lado}…`;
   try {
-    const fotos = await acharImagens('', id, 'tv');
+    const fotos = await acharImagens('', id, tipoAlvo);
     if (!fotos.length){ st.textContent = 'sem alternativas para esse círculo'; return; }
     const campo = alvo === 'c1' ? '_posC1' : '_posC2';
     s2[campo] = ((s2[campo] ?? 0) + 1) % fotos.length;
