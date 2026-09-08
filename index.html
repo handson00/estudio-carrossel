@@ -133,8 +133,10 @@ dialog h3{margin:0 0 6px;font-family:Anton,Impact,sans-serif;font-weight:400;let
     </div>
     <p class="mini" id="stAuto" style="margin:0 0 8px"></p>
     <button class="btn" id="bDiag" style="width:100%;margin-bottom:8px">🩺 Testar conexão com o TMDb</button>
-    <label>Imagem de fundo</label>
+    <label>Imagem de fundo (paisagem/cenário)</label>
     <div class="drop" id="dFundo">clique ou arraste a imagem aqui</div>
+    <label style="margin-top:10px">Personagem na frente (recortado, PNG transparente)</label>
+    <div class="drop" id="dFrente">opcional — fica sobre os círculos</div>
     <div id="rCirc">
       <div class="row">
         <div><label>Círculo esquerdo</label><div class="drop" id="dC1">opcional</div></div>
@@ -266,7 +268,7 @@ const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
 
 function novoSlide(tipo){
-  return { tipo, titulo:'', obra:'', apoio:'', etiqueta:'', img:null, c1:null, c2:null,
+  return { tipo, titulo:'', obra:'', apoio:'', etiqueta:'', img:null, c1:null, c2:null, imgFrente:null,
            tmdbId:null, tmdbTipo:'tv', imgHint:'', tmdbC1:null, tmdbC2:null,
            tmdbC1Tipo:'tv', tmdbC2Tipo:'tv', divisorY:null };
 }
@@ -412,12 +414,17 @@ function chrome(s, idx, total){
 function drawCapa(s){
   const topH = 760;
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
+  // Camada 1: Fundo (paisagem/cenário)
   if (s.img) cover(s.img, 0, 0, W, topH);
   else { fundoMarca(0,0,W,topH); placeholder('imagem de fundo', topH/2+60); }
-  grad(topH*0.42, topH, .94);
+  // Camada 2: Círculos (atrás do personagem)
   const C = state.circulos || CIRC_PADRAO;
   if (s.c1) circle(s.c1, C.margem + C.r, C.y, C.r);
   if (s.c2) circle(s.c2, W - C.margem - C.r, C.y, C.r);
+  // Camada 3: Personagem na frente (recortado, PNG transparente)
+  if (s.imgFrente) cover(s.imgFrente, 0, 0, W, topH);
+  // Camada 4: Degradê e texto
+  grad(topH*0.42, topH, .94);
   const BASE = H - 150;
   const {size, lines} = fitTitle(s.titulo, 920, 4, 88);
   const aFont = '400 37px Inter, sans-serif';
@@ -582,6 +589,7 @@ function syncEditor(){
   $('dicaApoio').textContent = s.tipo === 'oferta' ? '(um benefício por linha, no máximo 3)' : '';
   circUI(); divUI();
   $('dFundo').textContent = s.img ? '✔ imagem carregada (clique pra trocar)' : 'clique ou arraste a imagem aqui';
+  $('dFrente').textContent = s.imgFrente ? '✔ personagem carregado (clique pra trocar)' : 'opcional — fica sobre os círculos';
   $('dC1').textContent = s.c1 ? '✔' : 'opcional';
   $('dC2').textContent = s.c2 ? '✔' : 'opcional';
 }
@@ -608,7 +616,7 @@ function loadImg(file, key, el){
   r.onload = () => { const im = new Image(); im.onload = () => { cur()[key] = im; cur()[key+'_src'] = r.result; syncEditor(); render(); }; im.src = r.result; };
   r.readAsDataURL(file);
 }
-hookDrop('dFundo','img'); hookDrop('dC1','c1'); hookDrop('dC2','c2');
+hookDrop('dFundo','img'); hookDrop('dFrente','imgFrente'); hookDrop('dC1','c1'); hookDrop('dC2','c2');
 $('bLimparImg').onclick = () => { const s = cur(); s.img = s.c1 = s.c2 = null; s.img_src = s.c1_src = s.c2_src = null; syncEditor(); render(); };
 /* ============ Círculos da capa: posição espelhada ============ */
 function circUI(){
