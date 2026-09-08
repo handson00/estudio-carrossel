@@ -153,6 +153,13 @@ dialog h3{margin:0 0 6px;font-family:Anton,Impact,sans-serif;font-weight:400;let
       <input type="range" id="sR" min="90" max="240" step="2" style="width:100%">
       <button class="btn" id="bCircPadrao" style="margin-top:8px">Restaurar posição padrão</button>
       <p class="mini">Dica: dá pra arrastar os círculos direto na arte com o mouse. O outro acompanha, espelhado.</p>
+      <label style="margin:14px 0 2px">Posição do selo (claquete) <span class="mini">(arraste na arte ou use o slider)</span></label>
+      <label style="margin:6px 0 2px">Altura do selo: <b id="vDivY">auto</b></label>
+      <input type="range" id="sDivY" min="0" max="1200" step="2" style="width:100%">
+      <div class="row" style="margin-top:6px">
+        <button class="btn" id="bDivTravar">Travar como padrão</button>
+        <button class="btn" id="bDivPadrao">Restaurar automático</button>
+      </div>
     </div>
     <button class="btn" id="bLimparImg" style="margin-top:10px">Limpar imagens do card</button>
 
@@ -261,7 +268,7 @@ const $ = id => document.getElementById(id);
 function novoSlide(tipo){
   return { tipo, titulo:'', obra:'', apoio:'', etiqueta:'', img:null, c1:null, c2:null,
            tmdbId:null, tmdbTipo:'tv', imgHint:'', tmdbC1:null, tmdbC2:null,
-           tmdbC1Tipo:'tv', tmdbC2Tipo:'tv' };
+           tmdbC1Tipo:'tv', tmdbC2Tipo:'tv', divisorY:null };
 }
 const CIRC_PADRAO = { margem: 14, y: 272, r: 172 };
 let state = {
@@ -417,7 +424,8 @@ function drawCapa(s){
   const aLines = s.apoio ? wrapTokens(tokens(s.apoio), aFont, 860).slice(0,3) : [];
   const hT = lines.length * size*1.08, hA = aLines.length * 50 + (aLines.length ? 22 : 0);
   let y = BASE - hA - hT + size;
-  const ly = Math.max(topH*0.62, y - size - 118);
+  const lyAuto = Math.max(topH*0.62, y - size - 118);
+  const ly = s.divisorY != null ? s.divisorY : lyAuto;
   divisor(ly, 54, 210, 'rgba(255,255,255,.85)', 3);
   y = drawLines(lines, `400 ${size}px Anton, Impact, sans-serif`, W/2, y, size*1.08, 'center', '#fff', '#f7a92d');
   if (aLines.length) drawLines(aLines, aFont, W/2, y+22, 50, 'center', 'rgba(255,255,255,.8)', '#f7a92d');
@@ -433,7 +441,8 @@ function drawFoto(s){
   const aLines = s.apoio ? wrapTokens(tokens(s.apoio), aFont, 880).slice(0,4) : [];
   const hT = lines.length * size*1.08, hA = aLines.length * 48 + (aLines.length ? 18 : 0);
   let y = BASE - hA - hT + size;
-  const ly = y - size - 96;
+  const lyAuto = y - size - 96;
+  const ly = s.divisorY != null ? s.divisorY : lyAuto;
   divisor(ly, 40, 118, 'rgba(255,255,255,.8)', 3);
   y = drawLines(lines, `400 ${size}px Anton, Impact, sans-serif`, W/2, y, size*1.08, 'center', '#fff', '#f7a92d');
   if (aLines.length) drawLines(aLines, aFont, W/2, y+18, 48, 'center', 'rgba(255,255,255,.85)', '#f7a92d');
@@ -460,7 +469,7 @@ function drawLista(s){
 }
 function drawTexto(s){
   ctx.fillStyle = '#101014'; ctx.fillRect(0,0,W,H);
-  selo(W/2, 320, 84);
+  selo(W/2, s.divisorY != null ? s.divisorY : 320, 84);
   const {size, lines} = fitTitle(s.titulo, 880, 4, 80);
   ctx.fillStyle = '#f7a92d'; ctx.fillRect(W/2-60, 452, 120, 7);
   let y = 560 + size*0.5;
@@ -479,7 +488,7 @@ function drawOferta(s){
     g.addColorStop(0,'#241a08'); g.addColorStop(1,'#0b0b0d');
     ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
   }
-  selo(W/2, 250, 96);
+  selo(W/2, s.divisorY != null ? s.divisorY : 250, 96);
 
   const {size, lines} = fitTitle(s.titulo, 900, 3, 84);
   let y = 470 + size*0.5;
@@ -511,7 +520,7 @@ function drawOferta(s){
 function drawCta(s){
   ctx.fillStyle = '#f7a92d'; ctx.fillRect(0,0,W,H);
   if (s.img){ ctx.globalAlpha = .18; cover(s.img,0,0,W,H); ctx.globalAlpha = 1; }
-  selo(W/2, 360, 120);
+  selo(W/2, s.divisorY != null ? s.divisorY : 360, 120);
   const {size, lines} = fitTitle(s.titulo, 860, 3, 78);
   let y = 610 + size*0.6;
   y = drawLines(lines, `400 ${size}px Anton, Impact, sans-serif`, W/2, y, size*1.1, 'center', '#141414', '#fff');
@@ -571,7 +580,7 @@ function syncEditor(){
   document.querySelectorAll('#tipos .pill').forEach(p => p.classList.toggle('sel', p.dataset.t === s.tipo));
   $('rCirc').style.display = s.tipo === 'capa' ? 'block' : 'none';
   $('dicaApoio').textContent = s.tipo === 'oferta' ? '(um benefício por linha, no máximo 3)' : '';
-  circUI();
+  circUI(); divUI();
   $('dFundo').textContent = s.img ? '✔ imagem carregada (clique pra trocar)' : 'clique ou arraste a imagem aqui';
   $('dC1').textContent = s.c1 ? '✔' : 'opcional';
   $('dC2').textContent = s.c2 ? '✔' : 'opcional';
@@ -618,40 +627,125 @@ function circUI(){
 });
 $('bCircPadrao').onclick = () => { state.circulos = { ...CIRC_PADRAO }; circUI(); render(); };
 
-// arrastar na arte: move os dois de forma espelhada
+// UI do divisor (selo/claquete)
+function divUI(){
+  const s = cur();
+  if (s.divisorY != null){
+    $('sDivY').value = s.divisorY;
+    $('vDivY').textContent = s.divisorY + ' px';
+  } else {
+    const dh = divisorHit(s);
+    $('sDivY').value = dh ? dh.cy : 400;
+    $('vDivY').textContent = 'auto';
+  }
+}
+$('sDivY').addEventListener('input', e => {
+  const s = cur();
+  s.divisorY = +e.target.value;
+  $('vDivY').textContent = s.divisorY + ' px';
+  render(); prefsAuto();
+});
+$('bDivTravar').onclick = () => {
+  const s = cur();
+  const dh = divisorHit(s);
+  const yAtual = s.divisorY != null ? s.divisorY : (dh ? dh.cy : 400);
+  prefsGravar({ divisorY: yAtual });
+  $('stPrefs').textContent = 'posição do selo travada como padrão.';
+  setTimeout(prefsStatus, 1800);
+};
+$('bDivPadrao').onclick = () => {
+  const s = cur();
+  s.divisorY = null;
+  try {
+    const p = prefsLer() || {};
+    delete p.divisorY;
+    localStorage.setItem(PREFS_CHAVE, JSON.stringify(p));
+  } catch(e){}
+  divUI(); render(); prefsStatus();
+};
+
+// arrastar na arte: move os dois de forma espelhada + divisor vertical
 let arrastando = null;
 function posCanvas(ev){
   const r = cv.getBoundingClientRect();
   return { x: (ev.clientX - r.left) * (W / r.width), y: (ev.clientY - r.top) * (H / r.height) };
 }
+// retorna {cy, r} do divisor/selo do slide atual (para hit-test)
+function divisorHit(s){
+  if (!s) return null;
+  const tipo = s.tipo;
+  if (tipo === 'capa'){
+    const topH = 760, BASE = H - 150;
+    const {size, lines} = fitTitle(s.titulo, 920, 4, 88);
+    const aFont = '400 37px Inter, sans-serif';
+    const aLines = s.apoio ? wrapTokens(tokens(s.apoio), aFont, 860).slice(0,3) : [];
+    const hT = lines.length * size*1.08, hA = aLines.length * 50 + (aLines.length ? 22 : 0);
+    let y = BASE - hA - hT + size;
+    const lyAuto = Math.max(topH*0.62, y - size - 118);
+    return { cy: s.divisorY != null ? s.divisorY : lyAuto, r: 54 };
+  }
+  if (tipo === 'foto'){
+    const BASE = H - 150;
+    const {size, lines} = fitTitle(s.titulo, 900, 3, 72);
+    const aFont = '400 36px Inter, sans-serif';
+    const aLines = s.apoio ? wrapTokens(tokens(s.apoio), aFont, 880).slice(0,4) : [];
+    const hT = lines.length * size*1.08, hA = aLines.length * 48 + (aLines.length ? 18 : 0);
+    let y = BASE - hA - hT + size;
+    const lyAuto = y - size - 96;
+    return { cy: s.divisorY != null ? s.divisorY : lyAuto, r: 40 };
+  }
+  if (tipo === 'texto') return { cy: s.divisorY != null ? s.divisorY : 320, r: 84 };
+  if (tipo === 'oferta') return { cy: s.divisorY != null ? s.divisorY : 250, r: 96 };
+  if (tipo === 'cta') return { cy: s.divisorY != null ? s.divisorY : 360, r: 120 };
+  return null;
+}
 cv.addEventListener('mousedown', ev => {
-  const s = cur(); if (s.tipo !== 'capa') return;
-  const C = state.circulos, pt = posCanvas(ev);
-  const cx1 = C.margem + C.r, cx2 = W - C.margem - C.r;
-  const dentro = (cx) => Math.hypot(pt.x - cx, pt.y - C.y) <= C.r;
-  if (s.c1 && dentro(cx1)) arrastando = { lado: 'esq', dx: pt.x - cx1, dy: pt.y - C.y };
-  else if (s.c2 && dentro(cx2)) arrastando = { lado: 'dir', dx: pt.x - cx2, dy: pt.y - C.y };
-  if (arrastando){ cv.style.cursor = 'grabbing'; ev.preventDefault(); }
+  const s = cur(), pt = posCanvas(ev);
+  // prioridade 1: círculos da capa
+  if (s.tipo === 'capa'){
+    const C = state.circulos;
+    const cx1 = C.margem + C.r, cx2 = W - C.margem - C.r;
+    const dentro = (cx) => Math.hypot(pt.x - cx, pt.y - C.y) <= C.r;
+    if (s.c1 && dentro(cx1)){ arrastando = { modo:'circ', lado: 'esq', dx: pt.x - cx1, dy: pt.y - C.y }; cv.style.cursor = 'grabbing'; ev.preventDefault(); return; }
+    if (s.c2 && dentro(cx2)){ arrastando = { modo:'circ', lado: 'dir', dx: pt.x - cx2, dy: pt.y - C.y }; cv.style.cursor = 'grabbing'; ev.preventDefault(); return; }
+  }
+  // prioridade 2: divisor/selo (todos os tipos)
+  const dh = divisorHit(s);
+  if (dh && Math.hypot(pt.x - W/2, pt.y - dh.cy) <= dh.r + 10){
+    arrastando = { modo:'divisor', dy: pt.y - dh.cy };
+    cv.style.cursor = 'grabbing'; ev.preventDefault();
+  }
 });
 window.addEventListener('mousemove', ev => {
-  const s = cur();
+  const s = cur(), pt = posCanvas(ev);
   if (!arrastando){
-    if (s && s.tipo === 'capa' && (s.c1 || s.c2)){
-      const C = state.circulos, pt = posCanvas(ev);
-      const perto = (s.c1 && Math.hypot(pt.x - (C.margem+C.r), pt.y - C.y) <= C.r) ||
-                    (s.c2 && Math.hypot(pt.x - (W-C.margem-C.r), pt.y - C.y) <= C.r);
-      cv.style.cursor = perto ? 'grab' : 'default';
+    // hover cursor
+    let perto = false;
+    if (s.tipo === 'capa' && (s.c1 || s.c2)){
+      const C = state.circulos;
+      perto = (s.c1 && Math.hypot(pt.x - (C.margem+C.r), pt.y - C.y) <= C.r) ||
+              (s.c2 && Math.hypot(pt.x - (W-C.margem-C.r), pt.y - C.y) <= C.r);
     }
+    if (!perto){
+      const dh = divisorHit(s);
+      if (dh && Math.hypot(pt.x - W/2, pt.y - dh.cy) <= dh.r + 10) perto = true;
+    }
+    cv.style.cursor = perto ? 'grab' : 'default';
     return;
   }
-  const C = state.circulos, pt = posCanvas(ev);
-  const cxAlvo = pt.x - arrastando.dx;
-  const margem = arrastando.lado === 'esq' ? cxAlvo - C.r : (W - cxAlvo) - C.r;
-  C.margem = Math.max(-40, Math.min(240, Math.round(margem)));
-  C.y = Math.max(120, Math.min(640, Math.round(pt.y - arrastando.dy)));
-  circUI(); render();
+  if (arrastando.modo === 'circ'){
+    const C = state.circulos;
+    const cxAlvo = pt.x - arrastando.dx;
+    const margem = arrastando.lado === 'esq' ? cxAlvo - C.r : (W - cxAlvo) - C.r;
+    C.margem = Math.max(-40, Math.min(240, Math.round(margem)));
+    C.y = Math.max(120, Math.min(640, Math.round(pt.y - arrastando.dy)));
+    circUI(); render();
+  } else if (arrastando.modo === 'divisor'){
+    s.divisorY = Math.round(pt.y - arrastando.dy);
+    divUI(); render();
+  }
 });
-window.addEventListener('mouseup', () => { if (arrastando){ arrastando = null; cv.style.cursor = 'grab'; prefsAuto(); } });
+window.addEventListener('mouseup', () => { if (arrastando){ arrastando = null; cv.style.cursor = 'default'; prefsAuto(); } });
 
 /* ============ Navegação e estrutura ============ */
 $('bPrev').onclick = () => { if (state.atual>0){ state.atual--; syncEditor(); render(); } };
@@ -799,6 +893,7 @@ function prefsAplicar(){
   if (p.perfil) state.perfil = p.perfil;
   if (p.arrasta !== undefined) state.arrasta = p.arrasta;
   if (p.circulos) state.circulos = { ...CIRC_PADRAO, ...p.circulos };
+  if (p.divisorY != null) state.slides.forEach(s => { if (s.divisorY == null) s.divisorY = p.divisorY; });
 }
 function prefsStatus(){
   const p = prefsLer(), temChave = !!tmdbChave();
@@ -806,6 +901,7 @@ function prefsStatus(){
   partes.push(temChave ? '✅ chave do TMDb salva' : '⚠️ chave do TMDb ainda não salva');
   partes.push(p && p.perfil ? ('✅ @' + p.perfil + ', rodapé e círculos salvos')
                             : 'perfil e círculos ainda não salvos como padrão');
+  if (p && p.divisorY != null) partes.push('✅ selo travado em ' + p.divisorY + ' px');
   if (p && p.drive) partes.push('✅ pasta do Drive configurada');
   $('stPrefs').innerHTML = partes.join('<br>');
 }
@@ -929,6 +1025,7 @@ function serial(){
     slides: state.slides.map(s => ({ tipo:s.tipo, titulo:s.titulo, obra:s.obra, apoio:s.apoio, etiqueta:s.etiqueta,
       tmdbId:s.tmdbId||null, tmdbTipo:s.tmdbTipo||'tv', imgHint:s.imgHint||'', tmdbC1:s.tmdbC1||null, tmdbC2:s.tmdbC2||null,
       tmdbC1Tipo:s.tmdbC1Tipo||'tv', tmdbC2Tipo:s.tmdbC2Tipo||'tv',
+      divisorY:s.divisorY!=null?s.divisorY:null,
       img_src:s.img_src||null, c1_src:s.c1_src||null, c2_src:s.c2_src||null }))
   });
 }
@@ -943,7 +1040,8 @@ function carregar(json, comImagens){
       Object.assign(s, { titulo:o.titulo||'', obra:o.obra||'', apoio:o.apoio||'', etiqueta:o.etiqueta||'',
         tmdbId:o.tmdbId||null, tmdbTipo:o.tmdbTipo||'tv', imgHint:o.imgHint||'',
         tmdbC1:o.tmdbC1||null, tmdbC2:o.tmdbC2||null,
-        tmdbC1Tipo:o.tmdbC1Tipo||'tv', tmdbC2Tipo:o.tmdbC2Tipo||'tv' });
+        tmdbC1Tipo:o.tmdbC1Tipo||'tv', tmdbC2Tipo:o.tmdbC2Tipo||'tv',
+        divisorY:o.divisorY!=null?o.divisorY:null });
       if (comImagens) for (const k of ['img','c1','c2']){
         if (o[k+'_src']){ const im = new Image(); im.onload = render; im.src = o[k+'_src']; s[k] = im; s[k+'_src'] = o[k+'_src']; }
       }
@@ -984,7 +1082,7 @@ try {
 /* ============ Busca TMDb ============ */
 let tmdbAlvo = 'img';
 let ultimaBusca = null;
-const TMDB_PADRAO = ''; // versão online: a chave é pedida uma vez e fica salva no navegador de quem usa
+const TMDB_PADRAO = '50f57c6a6592ced79ff2d2f696566bd6';
 function tmdbChave(){
   try { const k = localStorage.getItem('tmdb-key');
         if (k === 'INVALIDA') return '';
