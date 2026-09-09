@@ -527,9 +527,11 @@ function drawOferta(s){
 function drawCta(s){
   ctx.fillStyle = '#f7a92d'; ctx.fillRect(0,0,W,H);
   if (s.img){ ctx.globalAlpha = .18; cover(s.img,0,0,W,H); ctx.globalAlpha = 1; }
-  selo(W/2, s.divisorY != null ? s.divisorY : 360, 120);
+  // Selo no topo (ajustado para y=220 para bater com a imagem correta)
+  selo(W/2, s.divisorY != null ? s.divisorY : 220, 120);
   const {size, lines} = fitTitle(s.titulo, 860, 3, 78);
-  let y = 610 + size*0.6;
+  // Título começa abaixo do selo (ajustado para y=420)
+  let y = 420 + size*0.6;
   y = drawLines(lines, `400 ${size}px Anton, Impact, sans-serif`, W/2, y, size*1.1, 'center', '#141414', '#fff');
   if (s.apoio){
     const al = wrapTokens(tokens(s.apoio), '600 37px Inter, sans-serif', 820);
