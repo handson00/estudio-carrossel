@@ -527,22 +527,68 @@ function drawOferta(s){
 function drawCta(s){
   ctx.fillStyle = '#f7a92d'; ctx.fillRect(0,0,W,H);
   if (s.img){ ctx.globalAlpha = .18; cover(s.img,0,0,W,H); ctx.globalAlpha = 1; }
-  // Selo no topo (ajustado para y=220 para bater com a imagem correta)
-  selo(W/2, s.divisorY != null ? s.divisorY : 220, 120);
+
+  // 1. Ícone Fixo no Topo (Centralizado)
+  const iconY = 240;
+  selo(W/2, iconY, 120);
+
+  // 2. Preparação do Texto (Título + Apoio)
   const {size, lines} = fitTitle(s.titulo, 860, 3, 78);
-  // Título começa abaixo do selo (ajustado para y=420)
-  let y = 420 + size*0.6;
-  y = drawLines(lines, `400 ${size}px Anton, Impact, sans-serif`, W/2, y, size*1.1, 'center', '#141414', '#fff');
+  let textLines = [];
+  // Adiciona linhas do título
+  lines.forEach(l => textLines.push({text: l, font: `400 ${size}px Anton, Impact, sans-serif`, color: '#141414', stroke: '#fff', lh: size*1.1}));
+
+  // Adiciona linhas de apoio se existir
   if (s.apoio){
     const al = wrapTokens(tokens(s.apoio), '600 37px Inter, sans-serif', 820);
-    y = drawLines(al.slice(0,4), '600 37px Inter, sans-serif', W/2, y+26, 50, 'center', 'rgba(0,0,0,.8)', '#fff');
+    al.slice(0,4).forEach(l => textLines.push({text: l, font: '600 37px Inter, sans-serif', color: 'rgba(0,0,0,.8)', stroke: '#fff', lh: 50}));
   }
+
+  // 3. Cálculo de Centralização Vertical
+  // Área disponível: entre o ícone (iconY + 60 raio + margem) e o botão (fixo em ~1050)
+  const startY = iconY + 100;
+  const endY = 1000;
+  const availableHeight = endY - startY;
+
+  // Calcula altura total do bloco de texto
+  let totalTextHeight = 0;
+  textLines.forEach(l => totalTextHeight += l.lh);
+
+  // Posição inicial Y para centralizar o bloco
+  let currentY = startY + (availableHeight - totalTextHeight) / 2;
+  // Ajuste fino para baseline
+  currentY += textLines.length > 0 ? textLines[0].lh * 0.8 : 0;
+
+  // 4. Desenho do Texto Centralizado
+  textLines.forEach(l => {
+    ctx.font = l.font;
+    ctx.fillStyle = l.color;
+    ctx.strokeStyle = l.stroke;
+    ctx.lineWidth = l.stroke === '#fff' ? 8 : 0; // Stroke apenas para o título se necessário, ou ajuste conforme estilo
+    // O estilo original usava stroke branco no título. Vamos manter simples para legibilidade.
+    if (l.stroke === '#fff' && l.font.includes('Anton')) {
+       ctx.lineWidth = 10; ctx.lineJoin = 'round';
+       ctx.strokeText(l.text, W/2, currentY);
+    }
+    ctx.fillText(l.text, W/2, currentY);
+    currentY += l.lh;
+  });
+
+  // 5. Botão Fixo na Parte Inferior
+  const btnY = 1060;
   ctx.font = '700 30px Inter, sans-serif';
-  const t = '🔖  SALVAR ESTE POST';
+  const t = '⚡ SALVAR ESTE POST';
   const tw = ctx.measureText(t).width;
+  const bw = tw + 80, bh = 76, bx = W/2 - bw/2, by = btnY;
+
+  // Fundo do botão (opcional, na ref é transparente com borda, mas vamos garantir contraste)
+  // Na imagem 2, o botão tem fundo transparente e borda preta, texto preto.
   ctx.strokeStyle = '#141414'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.roundRect(W/2-tw/2-34, y+40, tw+68, 76, 14); ctx.stroke();
-  ctx.fillStyle = '#141414'; ctx.fillText(t, W/2, y+90);
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.stroke();
+
+  // Ícone raio rosa/vermelho dentro do botão (simulado com emoji ou cor)
+  ctx.fillStyle = '#141414';
+  ctx.fillText(t, W/2, by + 48); // Centraliza verticalmente no botão
 }
 function placeholder(t, y){
   if (window.__SEM_DICA) return;
